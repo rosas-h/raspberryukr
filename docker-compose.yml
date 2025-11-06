@@ -1,0 +1,45 @@
+services:
+  search-api:
+    image: iarosalav/redline-offline:arm64
+    # you can use the latest image to test on your pc
+    # image: iarosalav/redline-offline:lates
+    container_name: redline-search-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # LanceDB configuration - REQUIRED: mount external database
+      - LANCEDB_PATH=${LANCEDB_PATH:-/app/storage/lancedb}
+      - LANCEDB_URI=${LANCEDB_URI:-/app/storage/lancedb}
+      
+      # QA table configuration
+      - QA_TABLE_NAME=${QA_TABLE_NAME:-ukr_qa}
+      - QA_DATASET_PATH=${QA_DATASET_PATH}
+      
+      # Embedder configuration - at least one is required
+      - EMBEDDER_URL=${EMBEDDER_URL}
+      - EMBEDDER_MODEL_NAME=${EMBEDDER_MODEL_NAME}
+      
+      # Search configuration
+      - DEFAULT_TOP_K=${DEFAULT_TOP_K:-5}
+      
+      # Server configuration
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DEBUG=${DEBUG:-false}
+    volumes:
+      # Mount external LanceDB storage - REQUIRED
+      - ${LANCEDB_HOST_PATH}:/app/storage/lancedb
+      
+      # Optional: mount QA dataset if refresh is needed
+      # - ${DATASET_HOST_PATH}:/app/data:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  default:
+    name: redline-search-network
